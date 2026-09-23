@@ -1,104 +1,145 @@
 import {useState} from 'react'
-import QRCode from 'react-qr-code'
+
+import QRTypeSelector from './components/QRTypeSelector'
+import QRForm from './components/QRForm'
+import QRDisplay from './components/QRDisplay'
+import QRCustomizer from './components/QRCustomizer'
+import QRHistory from './components/QRHistory'
+
 import './App.css'
 
-function App() {
-  const [value, setValue] = useState('')
-  const [backgroundColor, setBackgroundColor] = useState('#ffffff')
+const App = () => {
+  const [qrType, setQrType] = useState('url')
+  const [qrValue, setQrValue] = useState('')
+
+  const [size, setSize] = useState(250)
   const [foregroundColor, setForegroundColor] = useState('#000000')
-  const [size, setSize] = useState(200)
+  const [backgroundColor, setBackgroundColor] = useState('#ffffff')
 
-  const onChangeValue = event => {
-    setValue(event.target.value)
+  const [history, setHistory] = useState(() => {
+    const savedHistory = localStorage.getItem('qrHistory')
+
+    if (savedHistory !== null) {
+      return JSON.parse(savedHistory)
+    }
+
+    return []
+  })
+
+  const addToHistory = value => {
+    const newItem = {
+      id: Date.now(),
+      type: qrType,
+      value: value,
+      size: size,
+      foregroundColor: foregroundColor,
+      backgroundColor: backgroundColor,
+    }
+
+    const newHistory = [newItem, ...history]
+
+    setHistory(newHistory)
+
+    localStorage.setItem(
+      'qrHistory',
+      JSON.stringify(newHistory),
+    )
   }
 
-  const onChangeBackgroundColor = event => {
-    setBackgroundColor(event.target.value)
+  const generateQRCode = value => {
+    setQrValue(value)
+    addToHistory(value)
   }
 
-  const onChangeForegroundColor = event => {
-    setForegroundColor(event.target.value)
+  const deleteHistoryItem = id => {
+    const newHistory = history.filter(item => item.id !== id)
+
+    setHistory(newHistory)
+
+    localStorage.setItem(
+      'qrHistory',
+      JSON.stringify(newHistory),
+    )
   }
 
-  const onChangeSize = event => {
-    setSize(event.target.value)
+  const clearHistory = () => {
+    setHistory([])
+
+    localStorage.removeItem('qrHistory')
+  }
+
+  const selectHistoryItem = item => {
+    setQrType(item.type)
+    setQrValue(item.value)
+
+    setSize(item.size)
+    setForegroundColor(item.foregroundColor)
+    setBackgroundColor(item.backgroundColor)
+  }
+
+  const resetQRCode = () => {
+    setQrValue('')
+    setSize(250)
+    setForegroundColor('#000000')
+    setBackgroundColor('#ffffff')
   }
 
   return (
     <div className="app-container">
-      <div className="qr-container">
+
+      <div className="app-card">
 
         <h1>QR Code Generator</h1>
 
         <p className="description">
-          Enter text or URL to generate your QR code
+          Create QR codes for different purposes
         </p>
 
-        <input
-          type="text"
-          placeholder="Enter text or URL"
-          value={value}
-          onChange={onChangeValue}
-          className="text-input"
+        <QRTypeSelector
+          qrType={qrType}
+          setQrType={setQrType}
         />
 
-        <div className="color-container">
+        <QRForm
+          qrType={qrType}
+          setQrValue={generateQRCode}
+        />
 
-          <div className="color-item">
-            <label>Background Color</label>
+        <QRCustomizer
+          size={size}
+          setSize={setSize}
+          foregroundColor={foregroundColor}
+          setForegroundColor={setForegroundColor}
+          backgroundColor={backgroundColor}
+          setBackgroundColor={setBackgroundColor}
+        />
 
-            <input
-              type="color"
-              value={backgroundColor}
-              onChange={onChangeBackgroundColor}
-            />
-          </div>
+        <QRDisplay
+          qrValue={qrValue}
+          size={size}
+          foregroundColor={foregroundColor}
+          backgroundColor={backgroundColor}
+        />
 
-          <div className="color-item">
-            <label>QR Code Color</label>
+        {qrValue !== '' && (
+          <button
+            type="button"
+            className="reset-button"
+            onClick={resetQRCode}
+          >
+            Reset
+          </button>
+        )}
 
-            <input
-              type="color"
-              value={foregroundColor}
-              onChange={onChangeForegroundColor}
-            />
-          </div>
-
-        </div>
-
-        <div className="size-container">
-
-          <label>QR Code Size: {size}px</label>
-
-          <input
-            type="range"
-            min="100"
-            max="400"
-            value={size}
-            onChange={onChangeSize}
-          />
-
-        </div>
-
-        <div className="qr-code-container">
-
-          {value !== '' ? (
-            <QRCode
-              value={value}
-              size={Number(size)}
-              bgColor={backgroundColor}
-              fgColor={foregroundColor}
-              level="H"
-            />
-          ) : (
-            <p className="empty-message">
-              Enter something above to generate QR code
-            </p>
-          )}
-
-        </div>
+        <QRHistory
+          history={history}
+          deleteHistoryItem={deleteHistoryItem}
+          clearHistory={clearHistory}
+          selectHistoryItem={selectHistoryItem}
+        />
 
       </div>
+
     </div>
   )
 }
